@@ -91,6 +91,14 @@
             font-size: 1.1em;
         }
 
+        .input-group label .required {
+            color: #ff6b6b;
+            font-weight: 700;
+        }
+
+        .input-group input[type="text"],
+        .input-group input[type="email"],
+        .input-group input[type="tel"],
         .input-group input[type="number"],
         .input-group select {
             width: 100%;
@@ -101,10 +109,42 @@
             transition: border-color 0.3s;
         }
 
+        .input-group input[type="text"]:focus,
+        .input-group input[type="email"]:focus,
+        .input-group input[type="tel"]:focus,
         .input-group input[type="number"]:focus,
         .input-group select:focus {
             outline: none;
             border-color: #667eea;
+        }
+
+        .input-group input.error {
+            border-color: #ff6b6b;
+        }
+
+        .error-text {
+            color: #ff6b6b;
+            font-size: 0.9em;
+            margin-top: 5px;
+            display: none;
+        }
+
+        .error-text.show {
+            display: block;
+        }
+
+        .client-info-section {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 10px;
+        }
+
+        .client-info-section h3 {
+            color: #856404;
+            margin-bottom: 15px;
+            font-size: 1.2em;
         }
 
         .category {
@@ -224,8 +264,13 @@
             transition: background 0.3s;
         }
 
-        .download-btn:hover {
+        .download-btn:hover:not(:disabled) {
             background: #218838;
+        }
+
+        .download-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
         }
 
         .whatsapp-btn {
@@ -291,6 +336,20 @@
             text-align: center;
         }
 
+        .success-message {
+            background: #28a745;
+            color: white;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 8px;
+            text-align: center;
+            display: none;
+        }
+
+        .success-message.show {
+            display: block;
+        }
+
         @media (max-width: 968px) {
             .content {
                 grid-template-columns: 1fr;
@@ -317,6 +376,25 @@
 
         <div id="main-content" class="content" style="display: none;">
             <div class="services-section">
+                <div class="client-info-section">
+                    <h3>📝 Información del Cliente</h3>
+                    <div class="input-group" style="margin-bottom: 15px;">
+                        <label for="client-name">Nombre Completo <span class="required">*</span></label>
+                        <input type="text" id="client-name" placeholder="Ej: María García">
+                        <div class="error-text" id="name-error">Por favor ingresa tu nombre completo</div>
+                    </div>
+                    <div class="input-group" style="margin-bottom: 15px;">
+                        <label for="client-email">Correo Electrónico <span class="required">*</span></label>
+                        <input type="email" id="client-email" placeholder="Ej: maria@ejemplo.com">
+                        <div class="error-text" id="email-error">Por favor ingresa un correo válido</div>
+                    </div>
+                    <div class="input-group" style="margin-bottom: 0;">
+                        <label for="client-phone">Teléfono <span class="required">*</span></label>
+                        <input type="tel" id="client-phone" placeholder="Ej: +57 300 123 4567">
+                        <div class="error-text" id="phone-error">Por favor ingresa tu teléfono</div>
+                    </div>
+                </div>
+
                 <div class="input-group">
                     <label for="guests">👥 Número de Asistentes:</label>
                     <input type="number" id="guests" min="1" value="100" placeholder="Ej: 100">
@@ -403,7 +481,11 @@
                     </div>
                 </div>
                 
-                <button class="download-btn" onclick="downloadPDF()">📥 Descargar Cotización PDF</button>
+                <div class="success-message" id="success-message">
+                    ✅ ¡Datos guardados! Descargando tu cotización...
+                </div>
+                
+                <button class="download-btn" id="download-pdf-btn" onclick="downloadPDF()">📥 Descargar Cotización PDF</button>
                 <a href="https://wa.me/573004947121?text=Hola%2C%20ya%20hice%20la%20cotizaci%C3%B3n%20en%20el%20simulador%2C%20quiero%20organizar%20detalles%20con%20el%20equipo%20de%20expertos" target="_blank" class="whatsapp-btn">
                     💬 Hablar con un Asesor
                 </a>
@@ -413,6 +495,7 @@
 
     <script>
         const GOOGLE_SHEETS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT1DROcjzyKUt1YsnqvG8e3wF-GoC6yvQOHFRAWYWlqNXMlrc7RrlfHFewqdR_lA51nqohw4Me2llXg/pub?gid=0&single=true&output=csv';
+        const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx_hz3_8zXGkTlLqftbcT5weD2UsbeOzStehYfumxaOEjm99fkjIm3nGOmjmt96iW7d/exec';
         
         let services = {};
 
@@ -423,6 +506,69 @@
                 minimumFractionDigits: 0,
                 maximumFractionDigits: 0
             }).format(value);
+        }
+
+        function validateClientInfo() {
+            const name = document.getElementById('client-name').value.trim();
+            const email = document.getElementById('client-email').value.trim();
+            const phone = document.getElementById('client-phone').value.trim();
+            
+            let isValid = true;
+            
+            const nameInput = document.getElementById('client-name');
+            const nameError = document.getElementById('name-error');
+            if (name === '') {
+                nameInput.classList.add('error');
+                nameError.classList.add('show');
+                isValid = false;
+            } else {
+                nameInput.classList.remove('error');
+                nameError.classList.remove('show');
+            }
+            
+            const emailInput = document.getElementById('client-email');
+            const emailError = document.getElementById('email-error');
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (email === '' || !emailRegex.test(email)) {
+                emailInput.classList.add('error');
+                emailError.classList.add('show');
+                isValid = false;
+            } else {
+                emailInput.classList.remove('error');
+                emailError.classList.remove('show');
+            }
+            
+            const phoneInput = document.getElementById('client-phone');
+            const phoneError = document.getElementById('phone-error');
+            if (phone === '') {
+                phoneInput.classList.add('error');
+                phoneError.classList.add('show');
+                isValid = false;
+            } else {
+                phoneInput.classList.remove('error');
+                phoneError.classList.remove('show');
+            }
+            
+            return isValid;
+        }
+
+        async function sendLeadToGoogleSheet(leadData) {
+            try {
+                const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(leadData)
+                });
+                
+                console.log('Lead enviado a Google Sheet');
+                return true;
+            } catch (error) {
+                console.error('Error al enviar lead:', error);
+                return false;
+            }
         }
 
         async function loadPricesFromGoogleSheets() {
@@ -603,18 +749,77 @@
             }
         }
 
-        function downloadPDF() {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            
+        async function downloadPDF() {
+            if (!validateClientInfo()) {
+                alert('Por favor completa todos los campos obligatorios (Nombre, Correo y Teléfono) antes de descargar la cotización.');
+                document.querySelector('.client-info-section').scrollIntoView({ behavior: 'smooth' });
+                return;
+            }
+
+            const clientName = document.getElementById('client-name').value.trim();
+            const clientEmail = document.getElementById('client-email').value.trim();
+            const clientPhone = document.getElementById('client-phone').value.trim();
             const guests = parseInt(document.getElementById('guests').value) || 1;
             const citySelect = document.getElementById('city');
             const cityName = citySelect.options[citySelect.selectedIndex].text;
             const cityFactor = parseFloat(citySelect.value);
             const weddingStyle = document.getElementById('wedding-style').value;
-            const timeOfDay = document.getElementById('time-of-day').value;
             const colorPalette = document.getElementById('color-palette').value;
             const venueType = document.getElementById('venue-type').value;
+            
+            let minTotal = 0;
+            let maxTotal = 0;
+
+            Object.keys(services).forEach(category => {
+                services[category].forEach((service, index) => {
+                    const checkbox = document.getElementById(`${category}-${index}`);
+                    if (checkbox && checkbox.checked) {
+                        let min = service.min;
+                        let max = service.max;
+
+                        if (service.perPerson) {
+                            min *= guests;
+                            max *= guests;
+                        }
+
+                        min *= cityFactor;
+                        max *= cityFactor;
+
+                        minTotal += min;
+                        maxTotal += max;
+                    }
+                });
+            });
+
+            const leadData = {
+                nombre: clientName,
+                email: clientEmail,
+                telefono: clientPhone,
+                ciudad: cityName,
+                asistentes: guests,
+                estilo: weddingStyle,
+                colores: colorPalette,
+                locacion: venueType,
+                minimo: formatCurrency(minTotal),
+                maximo: formatCurrency(maxTotal),
+                promedio: formatCurrency((minTotal + maxTotal) / 2)
+            };
+
+            const successMsg = document.getElementById('success-message');
+            successMsg.classList.add('show');
+
+            await sendLeadToGoogleSheet(leadData);
+
+            setTimeout(() => {
+                successMsg.classList.remove('show');
+            }, 3000);
+
+            generatePDF(clientName, clientEmail, clientPhone, guests, cityName, cityFactor, weddingStyle, colorPalette, venueType);
+        }
+
+        function generatePDF(clientName, clientEmail, clientPhone, guests, cityName, cityFactor, weddingStyle, colorPalette, venueType) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
             
             let minTotal = 0;
             let maxTotal = 0;
@@ -648,7 +853,6 @@
                 });
             });
 
-            // Header
             doc.setFillColor(102, 126, 234);
             doc.rect(0, 0, 210, 50, 'F');
             doc.setTextColor(255, 255, 255);
@@ -659,25 +863,42 @@
             doc.setFontSize(11);
             doc.text('Creando historias de amor hechas a medida', 105, 38, { align: 'center' });
 
-            // Información de la boda
             doc.setTextColor(0, 0, 0);
             let y = 60;
+            doc.setFillColor(248, 249, 250);
+            doc.rect(15, y, 180, 25, 'F');
+            y += 8;
             doc.setFontSize(12);
             doc.setFont(undefined, 'bold');
+            doc.setTextColor(102, 126, 234);
+            doc.text('Información del Cliente:', 20, y);
+            y += 7;
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+            doc.setTextColor(60, 60, 60);
+            doc.text(`Nombre: ${clientName}`, 20, y);
+            y += 5;
+            doc.text(`Email: ${clientEmail}`, 20, y);
+            y += 5;
+            doc.text(`Teléfono: ${clientPhone}`, 20, y);
+            y += 12;
+
+            doc.setFontSize(12);
+            doc.setFont(undefined, 'bold');
+            doc.setTextColor(0, 0, 0);
             doc.text('Detalles de tu Celebración:', 20, y);
             y += 8;
             doc.setFont(undefined, 'normal');
             doc.setFontSize(10);
             doc.text(`Ciudad: ${cityName} | Asistentes: ${guests}`, 20, y);
             y += 6;
-            doc.text(`Estilo: ${weddingStyle} | Momento: ${timeOfDay}`, 20, y);
+            doc.text(`Estilo: ${weddingStyle}`, 20, y);
             y += 6;
             doc.text(`Colores: ${colorPalette}`, 20, y);
             y += 6;
             doc.text(`Locación: ${venueType}`, 20, y);
             y += 12;
 
-            // Sobre Tomás Acosta
             doc.setFillColor(248, 249, 250);
             doc.rect(15, y, 180, 45, 'F');
             y += 8;
@@ -705,7 +926,6 @@
             
             y += 10;
 
-            // Servicios Seleccionados
             doc.setFontSize(14);
             doc.setFont(undefined, 'bold');
             doc.setTextColor(0, 0, 0);
@@ -742,7 +962,6 @@
                 y += 6;
             });
 
-            // Total section
             y += 10;
             if (y > 240) {
                 doc.addPage();
@@ -765,7 +984,6 @@
             doc.setFont(undefined, 'normal');
             doc.text(`Inversión promedio por persona: ${formatCurrency(avgPerPerson)}`, 105, y + 42, { align: 'center' });
 
-            // WhatsApp section
             y += 55;
             if (y > 250) {
                 doc.addPage();
@@ -782,7 +1000,6 @@
             doc.setFont(undefined, 'normal');
             doc.text('Escríbenos por WhatsApp al +57 300 494 7121', 105, y + 18, { align: 'center' });
 
-            // Footer
             y += 35;
             if (y > 270) {
                 doc.addPage();
@@ -793,12 +1010,14 @@
             doc.text('Esta cotización es un estimado y puede variar según detalles específicos de tu evento.', 105, y, { align: 'center' });
             doc.text('Tomás Acosta Decorador - Wedding Planner & Designer', 105, y + 5, { align: 'center' });
 
-            doc.save(`Cotizacion_Boda_${cityName}_${guests}personas.pdf`);
+            doc.save(`Cotizacion_Boda_${clientName.replace(/\s+/g, '_')}_${cityName}.pdf`);
         }
 
-        // Initialize
         document.getElementById('guests').addEventListener('input', updateSummary);
         document.getElementById('city').addEventListener('change', updateSummary);
+        document.getElementById('client-name').addEventListener('blur', validateClientInfo);
+        document.getElementById('client-email').addEventListener('blur', validateClientInfo);
+        document.getElementById('client-phone').addEventListener('blur', validateClientInfo);
         
         loadPricesFromGoogleSheets();
     </script>
