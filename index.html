@@ -166,7 +166,7 @@
             margin-bottom: 10px;
             border-radius: 8px;
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             transition: all 0.3s;
         }
 
@@ -179,19 +179,52 @@
             width: 20px;
             height: 20px;
             margin-right: 15px;
+            margin-top: 3px;
             cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .service-item .service-content {
+            flex: 1;
         }
 
         .service-item label {
-            flex: 1;
             cursor: pointer;
-            font-weight: 500;
+            font-weight: 600;
+            color: #333;
+            display: block;
+            margin-bottom: 5px;
         }
 
-        .service-item .price-range {
+        .service-item .description {
+            font-size: 0.85em;
+            color: #666;
+            line-height: 1.4;
+            margin-bottom: 8px;
+            padding-left: 0;
+        }
+
+        .service-item .price-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .service-item .price {
             color: #28a745;
-            font-weight: 600;
-            font-size: 0.9em;
+            font-weight: 700;
+            font-size: 1em;
+        }
+
+        .service-item .price-per-person {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: 500;
         }
 
         .summary-section {
@@ -212,19 +245,30 @@
         }
 
         .summary-item {
-            padding: 10px 0;
+            padding: 12px 0;
             border-bottom: 1px solid #ddd;
         }
 
         .summary-item-name {
             font-weight: 600;
             color: #555;
+            margin-bottom: 4px;
+        }
+
+        .summary-item-details {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .summary-item-price {
             color: #28a745;
             font-weight: 600;
-            margin-top: 5px;
+        }
+
+        .summary-item-per-person {
+            font-size: 0.85em;
+            color: #666;
         }
 
         .total-section {
@@ -243,11 +287,27 @@
         }
 
         .total-row.grand-total {
-            font-size: 1.5em;
+            font-size: 1.4em;
             font-weight: 700;
             padding-top: 15px;
             border-top: 2px solid rgba(255,255,255,0.3);
             margin-top: 15px;
+        }
+
+        .per-person-info {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            color: #333;
+        }
+
+        .per-person-info .highlight {
+            font-size: 1.3em;
+            font-weight: 700;
+            color: #667eea;
+            display: block;
+            margin-top: 5px;
         }
 
         .download-btn {
@@ -296,14 +356,6 @@
             background: #20BA5A;
         }
 
-        .per-person-info {
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 15px;
-            color: #333;
-        }
-
         .style-options {
             margin-top: 20px;
             padding: 20px;
@@ -350,6 +402,17 @@
             display: block;
         }
 
+        .csv-format-note {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            margin: 20px;
+            border-radius: 8px;
+            font-size: 0.9em;
+            color: #1565c0;
+            display: none;
+        }
+
         @media (max-width: 968px) {
             .content {
                 grid-template-columns: 1fr;
@@ -359,6 +422,11 @@
                 border-left: none;
                 border-top: 3px solid #ddd;
                 position: relative;
+            }
+
+            .service-item .price-info {
+                flex-direction: column;
+                align-items: flex-start;
             }
         }
     </style>
@@ -463,21 +531,13 @@
                 <h2 class="summary-title">📋 Resumen de tu Boda</h2>
                 <div id="summary-items"></div>
                 <div class="total-section">
-                    <div class="total-row">
-                        <span>Mínimo Estimado:</span>
-                        <span id="min-total">$0</span>
-                    </div>
-                    <div class="total-row">
-                        <span>Máximo Estimado:</span>
-                        <span id="max-total">$0</span>
-                    </div>
                     <div class="total-row grand-total">
-                        <span>Promedio:</span>
-                        <span id="avg-total">$0</span>
+                        <span>Total Estimado:</span>
+                        <span id="total">$0</span>
                     </div>
                     <div class="per-person-info">
-                        <strong>Costo por persona:</strong>
-                        <div id="per-person">$0 - $0</div>
+                        <strong>💰 Inversión por Persona:</strong>
+                        <span class="highlight" id="per-person">$0</span>
                     </div>
                 </div>
                 
@@ -494,11 +554,26 @@
     </div>
 
     <script>
+        // ============================================
+        // CONFIGURACIÓN - Modifica estas URLs según tu proyecto
+        // ============================================
         const GOOGLE_SHEETS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT1DROcjzyKUt1YsnqvG8e3wF-GoC6yvQOHFRAWYWlqNXMlrc7RrlfHFewqdR_lA51nqohw4Me2llXg/pub?gid=0&single=true&output=csv';
         const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx_hz3_8zXGkTlLqftbcT5weD2UsbeOzStehYfumxaOEjm99fkjIm3nGOmjmt96iW7d/exec';
         
+        // ============================================
+        // ESTRUCTURA ESPERADA DEL CSV:
+        // Categoria | Servicio | Precio | PerPerson | Descripcion
+        // ============================================
+        // Ejemplo:
+        // Flores | Bouquet Novia | 800000 | false | Bouquet artesanal con rosas importadas y follaje premium
+        // Catering | Plato Principal | 95000 | true | Entrada, plato fuerte, postre y bebidas por persona
+        // ============================================
+        
         let services = {};
 
+        /**
+         * Formatea un valor numérico a moneda colombiana
+         */
         function formatCurrency(value) {
             return new Intl.NumberFormat('es-CO', {
                 style: 'currency',
@@ -508,6 +583,9 @@
             }).format(value);
         }
 
+        /**
+         * Valida que los campos obligatorios del cliente estén completos
+         */
         function validateClientInfo() {
             const name = document.getElementById('client-name').value.trim();
             const email = document.getElementById('client-email').value.trim();
@@ -515,6 +593,7 @@
             
             let isValid = true;
             
+            // Validar nombre
             const nameInput = document.getElementById('client-name');
             const nameError = document.getElementById('name-error');
             if (name === '') {
@@ -526,6 +605,7 @@
                 nameError.classList.remove('show');
             }
             
+            // Validar email
             const emailInput = document.getElementById('client-email');
             const emailError = document.getElementById('email-error');
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -538,6 +618,7 @@
                 emailError.classList.remove('show');
             }
             
+            // Validar teléfono
             const phoneInput = document.getElementById('client-phone');
             const phoneError = document.getElementById('phone-error');
             if (phone === '') {
@@ -552,6 +633,9 @@
             return isValid;
         }
 
+        /**
+         * Envía los datos del lead a Google Sheets
+         */
         async function sendLeadToGoogleSheet(leadData) {
             try {
                 const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
@@ -571,6 +655,9 @@
             }
         }
 
+        /**
+         * Carga los precios desde Google Sheets (CSV público)
+         */
         async function loadPricesFromGoogleSheets() {
             try {
                 const response = await fetch(GOOGLE_SHEETS_CSV_URL);
@@ -583,28 +670,29 @@
                         services = {};
                         
                         results.data.forEach(row => {
-                            const category = row.Categoria || row.Categoría || row.categoria;
-                            const serviceName = row.Servicio || row.servicio;
-                            const min = parseInt(row.Min || row.min);
-                            const max = parseInt(row.Max || row.max);
-                            const perPerson = (row.PerPerson || row.perPerson || row.perperson || '').toLowerCase() === 'true';
-                            const promptKey = row.PromptKey || row.promptKey || row.promptkey || '';
+                            // Obtener valores con múltiples variantes de nombre de columna
+                            const category = row.Categoria || row.Categoría || row.categoria || '';
+                            const serviceName = row.Servicio || row.servicio || '';
+                            const precio = parseInt(row.Precio || row.precio || 0);
+                            const perPerson = (row.PerPerson || row.perPerson || row.perperson || row.PorPersona || row.porpersona || '').toLowerCase() === 'true';
+                            const descripcion = row.Descripcion || row.descripcion || row.Descripción || row.descripción || '';
                             
-                            if (category && serviceName && !isNaN(min) && !isNaN(max)) {
+                            // Solo agregar si tiene datos válidos
+                            if (category && serviceName && !isNaN(precio) && precio > 0) {
                                 if (!services[category]) {
                                     services[category] = [];
                                 }
                                 
                                 services[category].push({
                                     name: serviceName,
-                                    min: min,
-                                    max: max,
+                                    precio: precio,
                                     perPerson: perPerson,
-                                    promptKey: promptKey
+                                    descripcion: descripcion
                                 });
                             }
                         });
                         
+                        // Mostrar contenido principal
                         document.getElementById('loading').style.display = 'none';
                         document.getElementById('main-content').style.display = 'grid';
                         
@@ -622,6 +710,9 @@
             }
         }
 
+        /**
+         * Muestra mensaje de error
+         */
         function showError(message) {
             document.getElementById('loading').innerHTML = `
                 <div class="error-message">
@@ -631,8 +722,12 @@
             `;
         }
 
+        /**
+         * Renderiza las categorías y servicios en el DOM
+         */
         function renderCategories() {
             const container = document.getElementById('categories');
+            const guests = parseInt(document.getElementById('guests').value) || 1;
             container.innerHTML = '';
 
             Object.keys(services).forEach(category => {
@@ -654,25 +749,43 @@
                     checkbox.onchange = updateSummary;
 
                     const serviceContent = document.createElement('div');
-                    serviceContent.style.flex = '1';
+                    serviceContent.className = 'service-content';
 
+                    // Nombre del servicio
                     const label = document.createElement('label');
                     label.htmlFor = `${category}-${index}`;
                     label.textContent = service.name;
-                    label.style.cursor = 'pointer';
-                    label.style.fontWeight = '500';
 
-                    const priceRange = document.createElement('div');
-                    priceRange.className = 'price-range';
+                    // Descripción del servicio
+                    const description = document.createElement('div');
+                    description.className = 'description';
+                    description.textContent = service.descripcion || 'Servicio profesional incluido en tu celebración.';
+
+                    // Información de precio
+                    const priceInfo = document.createElement('div');
+                    priceInfo.className = 'price-info';
+
+                    const priceSpan = document.createElement('span');
+                    priceSpan.className = 'price';
                     
                     if (service.perPerson) {
-                        priceRange.textContent = `${formatCurrency(service.min)} - ${formatCurrency(service.max)} por persona`;
+                        priceSpan.textContent = `${formatCurrency(service.precio)} /persona`;
                     } else {
-                        priceRange.textContent = `${formatCurrency(service.min)} - ${formatCurrency(service.max)}`;
+                        priceSpan.textContent = formatCurrency(service.precio);
+                        
+                        // Calcular y mostrar precio por persona para rubros fijos
+                        const pricePerPerson = document.createElement('span');
+                        pricePerPerson.className = 'price-per-person';
+                        pricePerPerson.id = `per-person-${category}-${index}`;
+                        pricePerPerson.textContent = `≈ ${formatCurrency(service.precio / guests)} /persona`;
+                        priceInfo.appendChild(pricePerPerson);
                     }
 
+                    priceInfo.insertBefore(priceSpan, priceInfo.firstChild);
+
                     serviceContent.appendChild(label);
-                    serviceContent.appendChild(priceRange);
+                    serviceContent.appendChild(description);
+                    serviceContent.appendChild(priceInfo);
 
                     serviceDiv.appendChild(checkbox);
                     serviceDiv.appendChild(serviceContent);
@@ -684,43 +797,61 @@
             });
         }
 
+        /**
+         * Actualiza el resumen de la cotización
+         */
         function updateSummary() {
             const guests = parseInt(document.getElementById('guests').value) || 1;
             const cityFactor = parseFloat(document.getElementById('city').value);
             
-            let minTotal = 0;
-            let maxTotal = 0;
+            let total = 0;
             const selectedItems = [];
 
+            // Actualizar precios por persona en rubros fijos
+            Object.keys(services).forEach(category => {
+                services[category].forEach((service, index) => {
+                    if (!service.perPerson) {
+                        const perPersonElement = document.getElementById(`per-person-${category}-${index}`);
+                        if (perPersonElement) {
+                            const adjustedPrice = service.precio * cityFactor;
+                            perPersonElement.textContent = `≈ ${formatCurrency(adjustedPrice / guests)} /persona`;
+                        }
+                    }
+                });
+            });
+
+            // Calcular totales de servicios seleccionados
             Object.keys(services).forEach(category => {
                 services[category].forEach((service, index) => {
                     const checkbox = document.getElementById(`${category}-${index}`);
                     if (checkbox && checkbox.checked) {
-                        let min = service.min;
-                        let max = service.max;
+                        let precio = service.precio;
 
+                        // Si es por persona, multiplicar por cantidad de invitados
                         if (service.perPerson) {
-                            min *= guests;
-                            max *= guests;
+                            precio *= guests;
                         }
 
-                        min *= cityFactor;
-                        max *= cityFactor;
+                        // Aplicar factor de ciudad
+                        precio *= cityFactor;
 
-                        minTotal += min;
-                        maxTotal += max;
+                        total += precio;
+
+                        // Calcular precio por persona para este rubro
+                        const precioPerPerson = precio / guests;
 
                         selectedItems.push({
                             category,
                             name: service.name,
-                            min,
-                            max,
+                            precio,
+                            precioPerPerson,
                             perPerson: service.perPerson
                         });
                     }
                 });
             });
 
+            // Renderizar items seleccionados en el resumen
             const summaryContainer = document.getElementById('summary-items');
             summaryContainer.innerHTML = '';
 
@@ -732,30 +863,39 @@
                     itemDiv.className = 'summary-item';
                     itemDiv.innerHTML = `
                         <div class="summary-item-name">${item.name}</div>
-                        <div class="summary-item-price">${formatCurrency(item.min)} - ${formatCurrency(item.max)}</div>
+                        <div class="summary-item-details">
+                            <span class="summary-item-price">${formatCurrency(item.precio)}</span>
+                            <span class="summary-item-per-person">${formatCurrency(item.precioPerPerson)}/persona</span>
+                        </div>
                     `;
                     summaryContainer.appendChild(itemDiv);
                 });
             }
 
-            document.getElementById('min-total').textContent = formatCurrency(minTotal);
-            document.getElementById('max-total').textContent = formatCurrency(maxTotal);
-            document.getElementById('avg-total').textContent = formatCurrency((minTotal + maxTotal) / 2);
+            // Actualizar totales
+            document.getElementById('total').textContent = formatCurrency(total);
 
-            if (guests > 0) {
-                const minPerPerson = minTotal / guests;
-                const maxPerPerson = maxTotal / guests;
-                document.getElementById('per-person').textContent = `${formatCurrency(minPerPerson)} - ${formatCurrency(maxPerPerson)}`;
+            // Calcular y mostrar precio por persona total
+            if (guests > 0 && total > 0) {
+                const totalPerPerson = total / guests;
+                document.getElementById('per-person').textContent = formatCurrency(totalPerPerson);
+            } else {
+                document.getElementById('per-person').textContent = '$0';
             }
         }
 
+        /**
+         * Descarga la cotización en PDF
+         */
         async function downloadPDF() {
+            // Validar información del cliente
             if (!validateClientInfo()) {
                 alert('Por favor completa todos los campos obligatorios (Nombre, Correo y Teléfono) antes de descargar la cotización.');
                 document.querySelector('.client-info-section').scrollIntoView({ behavior: 'smooth' });
                 return;
             }
 
+            // Obtener datos del formulario
             const clientName = document.getElementById('client-name').value.trim();
             const clientEmail = document.getElementById('client-email').value.trim();
             const clientPhone = document.getElementById('client-phone').value.trim();
@@ -767,30 +907,23 @@
             const colorPalette = document.getElementById('color-palette').value;
             const venueType = document.getElementById('venue-type').value;
             
-            let minTotal = 0;
-            let maxTotal = 0;
-
+            // Calcular total
+            let total = 0;
             Object.keys(services).forEach(category => {
                 services[category].forEach((service, index) => {
                     const checkbox = document.getElementById(`${category}-${index}`);
                     if (checkbox && checkbox.checked) {
-                        let min = service.min;
-                        let max = service.max;
-
+                        let precio = service.precio;
                         if (service.perPerson) {
-                            min *= guests;
-                            max *= guests;
+                            precio *= guests;
                         }
-
-                        min *= cityFactor;
-                        max *= cityFactor;
-
-                        minTotal += min;
-                        maxTotal += max;
+                        precio *= cityFactor;
+                        total += precio;
                     }
                 });
             });
 
+            // Preparar datos del lead
             const leadData = {
                 nombre: clientName,
                 email: clientEmail,
@@ -800,59 +933,62 @@
                 estilo: weddingStyle,
                 colores: colorPalette,
                 locacion: venueType,
-                minimo: formatCurrency(minTotal),
-                maximo: formatCurrency(maxTotal),
-                promedio: formatCurrency((minTotal + maxTotal) / 2)
+                total: formatCurrency(total),
+                inversionPorPersona: formatCurrency(total / guests)
             };
 
+            // Mostrar mensaje de éxito
             const successMsg = document.getElementById('success-message');
             successMsg.classList.add('show');
 
+            // Enviar lead a Google Sheets
             await sendLeadToGoogleSheet(leadData);
 
+            // Ocultar mensaje después de 3 segundos
             setTimeout(() => {
                 successMsg.classList.remove('show');
             }, 3000);
 
+            // Generar PDF
             generatePDF(clientName, clientEmail, clientPhone, guests, cityName, cityFactor, weddingStyle, colorPalette, venueType);
         }
 
+        /**
+         * Genera el PDF de la cotización
+         */
         function generatePDF(clientName, clientEmail, clientPhone, guests, cityName, cityFactor, weddingStyle, colorPalette, venueType) {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
             
-            let minTotal = 0;
-            let maxTotal = 0;
+            let total = 0;
             const selectedItems = [];
 
+            // Recopilar servicios seleccionados
             Object.keys(services).forEach(category => {
                 services[category].forEach((service, index) => {
                     const checkbox = document.getElementById(`${category}-${index}`);
                     if (checkbox && checkbox.checked) {
-                        let min = service.min;
-                        let max = service.max;
+                        let precio = service.precio;
 
                         if (service.perPerson) {
-                            min *= guests;
-                            max *= guests;
+                            precio *= guests;
                         }
 
-                        min *= cityFactor;
-                        max *= cityFactor;
-
-                        minTotal += min;
-                        maxTotal += max;
+                        precio *= cityFactor;
+                        total += precio;
 
                         selectedItems.push({
                             category,
                             name: service.name,
-                            min,
-                            max
+                            descripcion: service.descripcion,
+                            precio,
+                            precioPerPerson: precio / guests
                         });
                     }
                 });
             });
 
+            // ====== HEADER ======
             doc.setFillColor(102, 126, 234);
             doc.rect(0, 0, 210, 50, 'F');
             doc.setTextColor(255, 255, 255);
@@ -863,6 +999,7 @@
             doc.setFontSize(11);
             doc.text('Creando historias de amor hechas a medida', 105, 38, { align: 'center' });
 
+            // ====== INFORMACIÓN DEL CLIENTE ======
             doc.setTextColor(0, 0, 0);
             let y = 60;
             doc.setFillColor(248, 249, 250);
@@ -883,6 +1020,7 @@
             doc.text(`Teléfono: ${clientPhone}`, 20, y);
             y += 12;
 
+            // ====== DETALLES DE LA CELEBRACIÓN ======
             doc.setFontSize(12);
             doc.setFont(undefined, 'bold');
             doc.setTextColor(0, 0, 0);
@@ -899,6 +1037,7 @@
             doc.text(`Locación: ${venueType}`, 20, y);
             y += 12;
 
+            // ====== SOBRE TOMÁS ACOSTA ======
             doc.setFillColor(248, 249, 250);
             doc.rect(15, y, 180, 45, 'F');
             y += 8;
@@ -926,6 +1065,7 @@
             
             y += 10;
 
+            // ====== SERVICIOS SELECCIONADOS ======
             doc.setFontSize(14);
             doc.setFont(undefined, 'bold');
             doc.setTextColor(0, 0, 0);
@@ -937,9 +1077,10 @@
 
             let currentCategory = '';
             selectedItems.forEach(item => {
+                // Nueva categoría
                 if (item.category !== currentCategory) {
                     y += 5;
-                    if (y > 270) {
+                    if (y > 260) {
                         doc.addPage();
                         y = 20;
                     }
@@ -952,39 +1093,67 @@
                     currentCategory = item.category;
                 }
 
-                if (y > 270) {
+                if (y > 260) {
                     doc.addPage();
                     y = 20;
                 }
 
+                // Nombre del servicio y precio
+                doc.setFont(undefined, 'bold');
                 doc.text(`• ${item.name}`, 25, y);
-                doc.text(`${formatCurrency(item.min)} - ${formatCurrency(item.max)}`, 150, y);
-                y += 6;
+                doc.setFont(undefined, 'normal');
+                doc.text(formatCurrency(item.precio), 150, y);
+                y += 5;
+
+                // Descripción (si existe)
+                if (item.descripcion) {
+                    doc.setFontSize(8);
+                    doc.setTextColor(100, 100, 100);
+                    const descLines = doc.splitTextToSize(item.descripcion, 120);
+                    descLines.forEach(line => {
+                        if (y > 270) {
+                            doc.addPage();
+                            y = 20;
+                        }
+                        doc.text(line, 28, y);
+                        y += 4;
+                    });
+                    doc.setFontSize(10);
+                    doc.setTextColor(0, 0, 0);
+                }
+
+                // Precio por persona
+                doc.setFontSize(8);
+                doc.setTextColor(40, 167, 69);
+                doc.text(`(${formatCurrency(item.precioPerPerson)} por persona)`, 28, y);
+                doc.setFontSize(10);
+                doc.setTextColor(0, 0, 0);
+                y += 8;
             });
 
+            // ====== RESUMEN TOTAL ======
             y += 10;
-            if (y > 240) {
+            if (y > 220) {
                 doc.addPage();
                 y = 20;
             }
 
+            // Caja de total
             doc.setFillColor(102, 126, 234);
-            doc.rect(20, y, 170, 45, 'F');
+            doc.rect(20, y, 170, 35, 'F');
             
             doc.setTextColor(255, 255, 255);
-            doc.setFontSize(12);
-            doc.text(`Inversión Mínima Estimada: ${formatCurrency(minTotal)}`, 25, y + 12);
-            doc.text(`Inversión Máxima Estimada: ${formatCurrency(maxTotal)}`, 25, y + 22);
             doc.setFontSize(14);
             doc.setFont(undefined, 'bold');
-            doc.text(`Inversión Promedio: ${formatCurrency((minTotal + maxTotal) / 2)}`, 25, y + 34);
-
-            const avgPerPerson = ((minTotal + maxTotal) / 2) / guests;
-            doc.setFontSize(10);
+            doc.text(`Inversión Total: ${formatCurrency(total)}`, 105, y + 15, { align: 'center' });
+            
+            const totalPerPerson = total / guests;
+            doc.setFontSize(12);
             doc.setFont(undefined, 'normal');
-            doc.text(`Inversión promedio por persona: ${formatCurrency(avgPerPerson)}`, 105, y + 42, { align: 'center' });
+            doc.text(`Inversión por Persona: ${formatCurrency(totalPerPerson)}`, 105, y + 27, { align: 'center' });
 
-            y += 55;
+            // ====== CTA WHATSAPP ======
+            y += 45;
             if (y > 250) {
                 doc.addPage();
                 y = 20;
@@ -1000,8 +1169,9 @@
             doc.setFont(undefined, 'normal');
             doc.text('Escríbenos por WhatsApp al +57 300 494 7121', 105, y + 18, { align: 'center' });
 
+            // ====== FOOTER ======
             y += 35;
-            if (y > 270) {
+            if (y > 280) {
                 doc.addPage();
                 y = 20;
             }
@@ -1009,16 +1179,28 @@
             doc.setFontSize(8);
             doc.text('Esta cotización es un estimado y puede variar según detalles específicos de tu evento.', 105, y, { align: 'center' });
             doc.text('Tomás Acosta Decorador - Wedding Planner & Designer', 105, y + 5, { align: 'center' });
+            doc.text(`Generado el ${new Date().toLocaleDateString('es-CO')}`, 105, y + 10, { align: 'center' });
 
+            // Guardar PDF
             doc.save(`Cotizacion_Boda_${clientName.replace(/\s+/g, '_')}_${cityName}.pdf`);
         }
 
-        document.getElementById('guests').addEventListener('input', updateSummary);
-        document.getElementById('city').addEventListener('change', updateSummary);
+        // ============================================
+        // EVENT LISTENERS
+        // ============================================
+        document.getElementById('guests').addEventListener('input', function() {
+            renderCategories(); // Re-renderizar para actualizar precios por persona
+            updateSummary();
+        });
+        document.getElementById('city').addEventListener('change', function() {
+            renderCategories(); // Re-renderizar para actualizar precios por persona
+            updateSummary();
+        });
         document.getElementById('client-name').addEventListener('blur', validateClientInfo);
         document.getElementById('client-email').addEventListener('blur', validateClientInfo);
         document.getElementById('client-phone').addEventListener('blur', validateClientInfo);
         
+        // Cargar precios al iniciar
         loadPricesFromGoogleSheets();
     </script>
 </body>
